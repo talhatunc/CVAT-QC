@@ -1,7 +1,7 @@
 <div align="center">
 
-[![Türkçe](https://img.shields.io/badge/lang-Türkçe-red.svg)](#tr)
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](#en)
+[![Türkçe](https://img.shields.io/badge/TR-Türkçe-red.svg)](#tr)
+[![English](https://img.shields.io/badge/EN-English-blue.svg)](#en)
 
 </div>
 
