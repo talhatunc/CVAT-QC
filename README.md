@@ -1,58 +1,50 @@
-Arkadaşlar merhaba, bu ZIP içerisinde yer alan 3 adet kalite kontrol scriptini sizin daha zorlanmamanız için hazırlıyorum. Bu bağlamda, direkt olarak bu kodları yerel kod editörleriniz üzerinden veya COLAB'e aktararak (COLAB'e aktarırken kod üzerinde oynama yapmanız gerekir. Bunun için Drive üzerinden resimleri ve XML dosyasını çekebilirsiniz. Ama ben yerelde yapmanızı tavsiye ediyorum.) çalıştırabilirsiniz. Kullanırken yorum satırlarını dikkate alıp ona göre kullanmayı unutmayın.
+# 🛠️ Kalite Kontrol Scriptleri Kullanım Kılavuzu
 
+Merhaba arkadaşlar! Bu repo, işinizi kolaylaştırmak adına hazırladığım 3 adet kalite kontrol scriptini içermektedir. Bu scriptleri kullanarak etiketleme süreçlerinizi otomatik olarak kontrol edebilir ve raporlayabilirsiniz.
 
+## 🚀 Başlangıç
 
-CONFIG Satıları içerisindeki dosya yollarını kendinize göre değiştirmeniz gerekmektedir. 
+Scriptleri çalıştırmak için iki yönteminiz var:
 
+1.  **Yerel Ortam (Önerilen):** Kodları direkt olarak kendi bilgisayarınızdaki Python editöründe (VS Code, PyCharm vb.) çalıştırabilirsiniz.
+2.  **Google Colab:** Kodları Colab'e aktarabilirsiniz.
+    * *Dikkat:* Colab kullanacaksanız, Drive bağlantısı yapmalı ve kod içerisindeki dosya yolu (path) ayarlarını Colab ortamına göre güncellemelisiniz. (Resimleri ve XML dosyasını Drive'dan çekmeniz gerekebilir.)
 
+## ⚙️ Kurulum ve Ayarlar
 
-Girdiler (Programa vermeniz gerekenler): 
+Scripti çalıştırmadan önce kod içerisindeki **CONFIG** satırlarını kendi dosya yollarınıza göre düzenlemeyi unutmayın.
 
-\- CVAT'tan aldığınız XML çıktısı
+### Gerekli Girdiler (Inputs)
+Programa sağlamanız gereken dosyalar şunlardır:
+* `XML Dosyası`: CVAT üzerinden aldığınız çıktı.
+* `Frameler`: Videoya ait görüntü kareleri.
 
-\- Frameleriniz
+### Beklenen Çıktılar (Outputs)
+Script başarıyla tamamlandığında aşağıdaki çıktıları üretecektir:
+* 📹 **Video Dosyası (.mp4):** İşlenmiş video çıktısı.
+* 📄 **PDF Raporu:** Analiz sonuçlarını içeren belge.
+* 💻 **Konsol Çıktısı:** (Sadece yerel kontrol içindir, paylaşılmasına gerek yoktur.)
 
+---
 
+## 📂 Teslim ve Yükleme Talimatları
 
-Çıktılar (Script çalıştıktan sonra koddan çıkmasını beklediğimiz içerikler): 
+Oluşturulan çıktıların Drive üzerindeki **"KALİTE KONTROL"** klasörüne, aşağıdaki kurallara göre yüklenmesi gerekmektedir.
 
-\- Video dosyası (mp4)
+| Çıktı Türü | Yükleneceği Klasör | Örnek İsimlendirme Formatı |
+| :--- | :--- | :--- |
+| **PDF Raporu** | `ALL REPORTS` | `YAZ101_GRUP4.pdf` |
+| **Video** | `ALL VİDEOS` | `YAZ101_GRUP4.mp4` |
 
-\- PDF Raporu
+> **⚠️ Önemli Not:** Lütfen dosya isimlendirmelerinde grup adınızı doğru yazdığınızdan emin olun.
 
-\- Konsol Çıktısı (Bu sizin yerelinizde kalacak. Bunu bizimle paylaşmanıza gerek yok.)
+---
 
+## 💡 Tavsiyeler ve Sorun Giderme
 
+* **Kodu İnceleyin:** Kodların içerisinde yer alan **yorum satırlarını** mutlaka okuyun ve dikkate alın.
+* **Hata Ayıklama:** Kodlar test edilmiş ve çalışır durumdadır. Ancak kendi verilerinizden kaynaklı hatalar alırsanız, lütfen önce kodun mantığını anlayarak hatayı kendiniz çözmeye çalışın.
 
+Başarılar!
 
-
-NOT: Video çıktısı ve PDF Raporunu Drive içerisinde yer açtığım "KALİTE KONTROL" dosyası içerisinde yer alan ilgili yerlere koyunuz 
-
-\- Raporu "YAZ101\_GRUP4.pdf" şeklinde örnek isimle "ALL REPORTS" klasörüne
-
-\- Video çıktısını da "YAZ101\_GRUP4.mp4" şeklinde örnek isimle "ALL VİDEOS" klasörüne
-
-koyunuz.
-
-
-
-
-
-NOT: Lütfen kodu anlamaya da çalışın. Benim denediğim XML çıktılarında hatasız çalışıyordu. Eğer sizde hata varsa kendiniz çözmeye çalışın. Bunun için de kodun mantığını anlamanız gerekmektedir.
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-***Yakuphan BİLMEZ***
-
+**Yakuphan BİLMEZ**
