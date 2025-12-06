@@ -1,17 +1,19 @@
 <div align="center">
 
-[![Türkçe](https://img.shields.io/badge/lang-Türkçe-red.svg)](#-kalite-kontrol-scriptleri-kullanım-kılavuzu)
-[![English](https://img.shields.io/badge/lang-English-blue.svg)](#-quality-control-scripts-user-guide)
+[![Türkçe](https://img.shields.io/badge/lang-Türkçe-red.svg)](#tr)
+[![English](https://img.shields.io/badge/lang-English-blue.svg)](#en)
 
 </div>
 
 ---
 
+<div id="tr"></div>
+
 # 🛠️ Kalite Kontrol Scriptleri Kullanım Kılavuzu
 
 Merhaba arkadaşlar! Bu repo, işinizi kolaylaştırmak adına hazırladığım **3 adet kalite kontrol scriptini** içermektedir. Bu scriptleri kullanarak etiketleme süreçlerinizi otomatik olarak kontrol edebilir ve raporlayabilirsiniz.
 
-## 🚀 Başlangıç (Getting Started)
+## 🚀 Başlangıç
 
 Scriptleri çalıştırmak için iki yönteminiz var:
 
@@ -62,6 +64,8 @@ Başarılar!
 <br>
 
 ---
+
+<div id="en"></div>
 
 # 🛠️ Quality Control Scripts User Guide
 
