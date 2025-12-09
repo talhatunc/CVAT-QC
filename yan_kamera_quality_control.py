@@ -9,12 +9,15 @@ from tqdm import tqdm
 from collections import defaultdict
 from fpdf import FPDF
 
+# --- PROJE YOLU ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- AYARLAR ---
 CONFIG = {
     # Dosya yollarınızı kontrol edin
-    "xml_path": "C:\\Users\\Yakuphan\\Desktop\\CVAT\\PREPROCESS DATA\\ALL OUTPUTS (XML)\\SWE101_GROUP_15.xml",      # XML YOLUNUZ
-    "images_folder": "C:\\Users\\Yakuphan\\Desktop\\CVAT\\PREPROCESS DATA\\ALL FRAMES\\GRUP35",  # RESIMLERIN BULUNDUGU KLASOR
-    "output_base_name": "SWE101_GRUP_15",        # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
+    "xml_path": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLOUTPUTSXML", "SWE101_GROUP_X.xml"),      # XML YOLUNUZ
+    "images_folder": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLFRAMES", "GRUPX"),  # RESIMLERIN BULUNDUGU KLASOR
+    "output_base_name": "SWE101_GRUP_X",        # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
     "fps": 2, 
     "skeleton_color": (255, 255, 255),
     "visible_point_color": (0, 255, 0),
@@ -39,17 +42,7 @@ def normalize_text(text):
         text = text.replace(src, target)
     return text
 
-def find_image_path(base_folder, xml_image_name):
-    direct_path = os.path.join(base_folder, xml_image_name)
-    if os.path.exists(direct_path): return direct_path
-    target_num = ''.join(filter(str.isdigit, xml_image_name))
-    for root, dirs, files in os.walk(base_folder):
-        for file in files:
-            if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                file_num = ''.join(filter(str.isdigit, file))
-                if file_num and target_num and (file_num.endswith(target_num) or target_num.endswith(file_num)):
-                    return os.path.join(root, file)
-    return None
+
 
 # --- PDF REPORT CLASS ---
 class PDFReport(FPDF):
@@ -175,15 +168,16 @@ def analyze_and_visualize(config):
 
     try:
         for idx, img in tqdm(enumerate(images), total=total_frames, desc="Analiz Ediliyor"):
-            xml_img_name = img.attrib['name']
-            found_path = find_image_path(config["images_folder"], xml_img_name)
+            full_img_name_from_xml = img.attrib['name']
+            img_filename = full_img_name_from_xml.replace("\\", "/").split("/")[-1]
             
-            frame_img = None
-            if found_path: frame_img = safe_imread(found_path)
+            img_path_full = os.path.join(config["images_folder"], img_filename)
+            
+            frame_img = safe_imread(img_path_full)
             
             if frame_img is None:
                 frame_img = np.zeros((h, w, 3), dtype=np.uint8)
-                cv2.putText(frame_img, f"BULUNAMADI: {xml_img_name}", (50, h//2), 
+                cv2.putText(frame_img, f"Resim Yok: {full_img_name_from_xml}", (50, h//2), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             else:
                 if frame_img.shape[1] != w or frame_img.shape[0] != h:
@@ -237,12 +231,11 @@ def analyze_and_visualize(config):
                         cv2.drawMarker(frame_img, center, config["occluded_point_color"], markerType=cv2.MARKER_CROSS, markerSize=12, thickness=2)
                     cv2.putText(frame_img, label, (center[0]+10, center[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, config["text_color"], 2)
 
-                display_name = os.path.basename(found_path) if found_path else xml_img_name
-                cv2.putText(frame_img, f"Frame: {idx} | File: {display_name}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, config["text_color"], 2)
+                cv2.putText(frame_img, f"Frame: {idx} | File: {img_filename}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, config["text_color"], 2)
             else:
                 cv2.putText(frame_img, "ETIKETLENMEMIS", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
-                missing_frames.append(xml_img_name)
+                missing_frames.append(full_img_name_from_xml)
 
             video_writer.write(frame_img)
             
@@ -253,71 +246,102 @@ def analyze_and_visualize(config):
     finally:
         video_writer.release()
         
+        # --- HESAPLAMALAR ---
         safe_total_frames = max(1, total_frames)
         safe_total_points = max(1, total_points_all)
+        
         labeling_rate = (annotated_frames_count / safe_total_frames) * 100
         completeness = (total_points_all / (max(1, annotated_frames_count) * 18)) * 100 # Yan kamera 18 nokta
         vis_rate = (total_visible_points / safe_total_points) * 100
         occ_rate = (total_occluded_points / safe_total_points) * 100
+        
         cv_area = 0
         if len(areas) > 0:
             std_dev_area = np.std(areas)
             mean_area = np.mean(areas)
             cv_area = (std_dev_area / mean_area) * 100 
 
-        # --- KONSOL ÇIKTISI ---
-        print("\n" + "="*60)
-        print(f"DETAYLI KALITE KONTROL RAPORU (YAN KAMERA)")
-        print("="*60)
-        print(f"1. GENEL DURUM\n   Toplam Kare: {total_frames}\n   Etiketli: {annotated_frames_count} (%{labeling_rate:.2f})\n   Isk. Butunlugu: %{completeness:.2f}")
-        print("-" * 30)
-        print(f"2. NOKTA ANALIZI\n   Gorunur: {total_visible_points} (%{vis_rate:.2f})\n   Kapali: {total_occluded_points} (%{occ_rate:.2f})")
-        print("-" * 30)
-        print(f"3. BOYUT ANALIZI\n   Varyasyon: %{cv_area:.2f}")
-        print("-" * 30)
-        print(f"4. UZUV DETAYLARI")
-        print(f"{'ID':<5} | {'Görünür':<10} | {'Görünmez':<10} | {'Oran %':<10}")
-        if missing_frames:
-            print("-" * 30)
-            print(f"5. ETIKETLENMEMIS KARELER ({len(missing_frames)} Adet)")
-            for mf in missing_frames:
-                print(f"   -> {mf}")
-        
-        table_data = []
-        sorted_keys = sorted(keypoint_stats.keys(), key=lambda x: int(x) if x.isdigit() else x)
-        for label in sorted_keys:
-            vis = keypoint_stats[label]['visible']
-            occ = keypoint_stats[label]['occluded']
-            total = vis + occ
-            pt_occ_rate = (occ / total * 100) if total > 0 else 0
-            rate_str = f"%{pt_occ_rate:.2f}"
-            if pt_occ_rate > 70: rate_str += " (!)"
-            print(f"{label:<5} | {vis:<10} | {occ:<10} | {rate_str:<10}")
-            table_data.append([label, vis, occ, rate_str])
-        print("="*60)
-
-        # PDF OLUŞTURMA (DÜZELTİLDİ)
+        # --- PDF RAPOR OLUŞTURMA ---
         try:
             pdf = PDFReport()
             pdf.add_page()
             
+            # Bilgi Bloğu
             pdf.set_font('Arial', '', 10)
             pdf.cell(0, 5, f"Dosya Adi: {os.path.basename(config['xml_path'])}", 0, 1)
             pdf.cell(0, 5, f"Tarih: {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}", 0, 1)
             pdf.ln(5)
             
-            # BURADA METHOD İSİMLERİ DÜZELTİLDİ:
+            # Bölüm 1
             pdf.section_title("1. GENEL OZET")
-            body_text = (f"Kamera Tipi: ALT KAMERA\nToplam Kare: {total_frames}\nEtiketli Kare: {annotated_frames_count} (%{labeling_rate:.2f})  \nEtiketlenmemiş Frame İsimleri: " + ", " .join(missing_frames) + f"  \nGorunur Noktalar: %{vis_rate:.2f}\nGorunmez Noktalar: %{occ_rate:.2f}\nBoyut Degisimi: %{cv_area:.2f}")
+            body_text = (f"Toplam Kare Sayisi: {total_frames}\n"
+                         f"Etiketlenen Kare Sayisi: {annotated_frames_count} (%{labeling_rate:.2f})\n"
+                         f"Tam (18 Noktali) Kareler: {fully_annotated_frames}\n"
+                         f"Iskelet Butunlugu: %{completeness:.2f}\n"
+                         f"Toplam Isaretlenen Nokta: {total_points_all}\n"
+                         f"Gorunur Noktalar: {total_visible_points} (%{vis_rate:.2f})\n"
+                         f"Gorunmez (Occluded) Noktalar: {total_occluded_points} (%{occ_rate:.2f})\n"
+                         f"Boyut Degisimi (Varyasyon): %{cv_area:.2f}")
+            
+            if missing_frames:
+                 body_text += f"\n\nEtiketlenmemis Kareler ({len(missing_frames)}): " + ", ".join(missing_frames[:10])
+                 if len(missing_frames) > 10: body_text += "..."
+
             pdf.section_body(body_text)
             
-            pdf.section_title("2. UZUV BAZLI ANALIZ")
-            pdf.create_centered_table(['ID', 'Gorunur', 'Gorunmez', 'Oran %'], table_data)
+            # Bölüm 2: Tablo
+            pdf.section_title("2. UZUV BAZLI GORUNMEZLIK ANALIZI")
             
+            table_header = ['ID', 'Gorunur', 'Gorunmez', 'Oran %']
+            table_data = []
+            
+            sorted_keys = sorted(keypoint_stats.keys(), key=lambda x: int(x) if x.isdigit() else x)
+            for label in sorted_keys:
+                vis = keypoint_stats[label]['visible']
+                occ = keypoint_stats[label]['occluded']
+                total = vis + occ
+                pt_occ_rate = (occ / total * 100) if total > 0 else 0
+                
+                rate_str = f"%{pt_occ_rate:.2f}"
+                if pt_occ_rate > 70:
+                    rate_str += " (!)"
+                
+                table_data.append([label, vis, occ, rate_str])
+            
+            pdf.create_centered_table(table_header, table_data)
+
             pdf.output(pdf_name)
             print(f"\nPDF Raporu Olusturuldu: {pdf_name}")
         except Exception as e:
             print(f"\nPDF Olusturma Hatasi: {e}")
+
+        print(f"Video Kaydedildi: {video_name}")
+
+        # --- KONSOL ÇIKTISI ---
+        print("\n" + "="*60)
+        print(f"KALITE KONTROL TAMAMLANDI (YAN KAMERA)")
+        print("="*60)
+        print(f"1. GENEL DURUM")
+        print(f"   Toplam Kare     : {total_frames}")
+        print(f"   Etiketli Kare   : {annotated_frames_count} (%{labeling_rate:.2f})")
+        print("-" * 30)
+        print(f"2. NOKTA ANALIZI")
+        print(f"   Toplam Nokta    : {total_points_all}")
+        print(f"   Görünür         : {total_visible_points} (%{vis_rate:.2f})")
+        print(f"   Kapalı          : {total_occluded_points} (%{occ_rate:.2f})")
+        print("-" * 30)
+        print(f"3. UZUV DETAYLARI")
+        print(f"{'ID':<5} | {'Görünür':<10} | {'Görünmez':<10} | {'Oran %':<10}")
+        for row in table_data:
+             print(f"{row[0]:<5} | {row[1]:<10} | {row[2]:<10} | {row[3]:<10}")
+        
+        if missing_frames:
+            print("-" * 30)
+            print(f"4. ETIKETLENMEMIS KARELER ({len(missing_frames)} Adet)")
+            for mf in missing_frames:
+                print(f"   -> {mf}")
+
+        print("="*60)
 
         print(f"Video Kaydedildi: {video_name}")
 

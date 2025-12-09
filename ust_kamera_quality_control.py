@@ -10,11 +10,14 @@ from tqdm import tqdm
 from collections import defaultdict
 from fpdf import FPDF
 
+# --- PROJE YOLU ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- AYARLAR ---
 CONFIG = {
-    "xml_path": "C:\\Users\\Yakuphan\\Desktop\\CVAT\\PREPROCESS DATA\\ALL OUTPUTS (XML)\\SWE101_GROUP_3.xml",   # XML YOLUNUZ
-    "images_folder": "C:\\Users\\Yakuphan\\Desktop\\CVAT\\PREPROCESS DATA\\ALL FRAMES\\GRUP23",     # RESIMLERIN BULUNDUGU KLASOR
-    "output_base_name": None,   # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
+    "xml_path": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLOUTPUTSXML", "SWE101_GROUP_X.xml"),   # XML YOLUNUZ
+    "images_folder": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLFRAMES", "GRUPX"),     # RESIMLERIN BULUNDUGU KLASOR
+    "output_base_name": "SWE101_GRUP_X",   # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
     "fps": 2, 
     "skeleton_color": (255, 255, 255),
     "visible_point_color": (0, 255, 0),
@@ -182,8 +185,12 @@ def analyze_and_visualize(config):
 
     try:
         for idx, img in tqdm(enumerate(images), total=total_frames, desc="Analiz Ediliyor"):
-            img_name = img.attrib['name']
-            img_path_full = os.path.join(config["images_folder"], img_name)
+            # XML'den gelen isim "GRUP2/002322.jpg" formatında olabilir
+            # Sadece dosya adını almak için split yapıyoruz
+            full_img_name_from_xml = img.attrib['name']
+            img_filename = full_img_name_from_xml.replace("\\", "/").split("/")[-1]
+            
+            img_path_full = os.path.join(config["images_folder"], img_filename)
             
             frame_img = safe_imread(img_path_full)
             

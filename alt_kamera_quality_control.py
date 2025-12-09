@@ -9,11 +9,14 @@ from tqdm import tqdm
 from collections import defaultdict
 from fpdf import FPDF
 
+# --- PROJE YOLU ---
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 # --- AYARLAR ---
 CONFIG = {
-    "xml_path": "C:\\Users\\Yakuphan\\Desktop\\CVAT\\PREPROCESS DATA\\ALL OUTPUTS (XML)\\YAZ101_GRUP_4.xml",  # XML YOLUNUZ
-    "images_folder": "C:\\Users\\Yakuphan\\Desktop\\CVAT\\PREPROCESS DATA\\ALL FRAMES\\GRUP4",  # RESIMLERIN BULUNDUGU KLASOR
-    "output_base_name": "YAZ101_GRUP_4",        # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
+    "xml_path": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLOUTPUTSXML", "YAZ101_GRUP_X.xml"),   # XML YOLUNUZ
+    "images_folder": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLFRAMES", "GRUPX"),     # RESIMLERIN BULUNDUGU KLASOR
+    "output_base_name": "YAZ101_GRUP_X",   # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
     "fps": 2, 
     "skeleton_color": (255, 255, 255),
     "visible_point_color": (0, 255, 0),
@@ -38,17 +41,7 @@ def normalize_text(text):
         text = text.replace(src, target)
     return text
 
-def find_image_path(base_folder, xml_image_name):
-    direct_path = os.path.join(base_folder, xml_image_name)
-    if os.path.exists(direct_path): return direct_path
-    target_num = ''.join(filter(str.isdigit, xml_image_name))
-    for root, dirs, files in os.walk(base_folder):
-        for file in files:
-            if file.lower().endswith(('.jpg', '.jpeg', '.png')):
-                file_num = ''.join(filter(str.isdigit, file))
-                if file_num and target_num and (file_num.endswith(target_num) or target_num.endswith(file_num)):
-                    return os.path.join(root, file)
-    return None
+
 
 # --- PDF REPORT CLASS ---
 class PDFReport(FPDF):
@@ -172,18 +165,16 @@ def analyze_and_visualize(config):
 
     try:
         for idx, img in tqdm(enumerate(images), total=total_frames, desc="Analiz Ediliyor"):
-            xml_img_name = img.attrib['name']
+            full_img_name_from_xml = img.attrib['name']
+            img_filename = full_img_name_from_xml.replace("\\", "/").split("/")[-1]
             
-            # AKILLI DOSYA ARAMA
-            found_path = find_image_path(config["images_folder"], xml_img_name)
+            img_path_full = os.path.join(config["images_folder"], img_filename)
             
-            frame_img = None
-            if found_path:
-                frame_img = safe_imread(found_path)
+            frame_img = safe_imread(img_path_full)
             
             if frame_img is None:
                 frame_img = np.zeros((h, w, 3), dtype=np.uint8)
-                cv2.putText(frame_img, f"BULUNAMADI: {xml_img_name}", (50, h//2), 
+                cv2.putText(frame_img, f"Resim Yok: {full_img_name_from_xml}", (50, h//2), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
             else:
                 if frame_img.shape[1] != w or frame_img.shape[0] != h:
@@ -237,11 +228,10 @@ def analyze_and_visualize(config):
                         cv2.drawMarker(frame_img, center, config["occluded_point_color"], markerType=cv2.MARKER_CROSS, markerSize=12, thickness=2)
                     cv2.putText(frame_img, label, (center[0]+10, center[1]-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, config["text_color"], 2)
 
-                display_name = os.path.basename(found_path) if found_path else xml_img_name
-                cv2.putText(frame_img, f"Frame: {idx} | File: {display_name}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, config["text_color"], 2)
+                cv2.putText(frame_img, f"Frame: {idx} | File: {img_filename}", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, config["text_color"], 2)
             else:
                 cv2.putText(frame_img, "ETIKETLENMEMIS", (30, 50), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
-                missing_frames.append(xml_img_name)
+                missing_frames.append(full_img_name_from_xml)
 
             video_writer.write(frame_img)
             
