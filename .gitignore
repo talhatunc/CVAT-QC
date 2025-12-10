@@ -1,0 +1,11 @@
+# Data Files
+PREPROCESSDATA/ALLOUTPUTSXML/SWE101_GROUP_2.xml
+PREPROCESSDATA/ALLFRAMES/GRUP2
+
+# Python
+__pycache__/
+*.pyc
+
+# Generated Reports/Videos
+*_QC_Video.mp4
+*_QC_Report.pdf

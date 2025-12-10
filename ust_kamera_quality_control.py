@@ -15,14 +15,15 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # --- AYARLAR ---
 CONFIG = {
-    "xml_path": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLOUTPUTSXML", "SWE101_GROUP_X.xml"),   # XML YOLUNUZ
-    "images_folder": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLFRAMES", "GRUPX"),     # RESIMLERIN BULUNDUGU KLASOR
-    "output_base_name": "SWE101_GRUP_X",   # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
+    "xml_path": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLOUTPUTSXML", "SWE101_GROUP_2.xml"),   # XML YOLUNUZ
+    "images_folder": os.path.join(BASE_DIR, "PREPROCESSDATA", "ALLFRAMES", "GRUP2"),     # RESIMLERIN BULUNDUGU KLASOR
+    "output_base_name": "SWE101_GROUP_2",   # TR İSE YAZ101 , ENG İSE SWE101 => ÖRNEK KULLANIM SWE101_GRUP_1  YA DA  YAZ101_GRUP_1
     "fps": 2, 
     "skeleton_color": (255, 255, 255),
     "visible_point_color": (0, 255, 0),
     "occluded_point_color": (0, 165, 255),
-    "text_color": (0, 255, 255)
+    "text_color": (0, 255, 255),
+    "jump_threshold": 100  # Piksel cinsinden ziplama esigi
 }
 
 # --- YARDIMCI FONKSİYONLAR ---
@@ -166,6 +167,12 @@ def analyze_and_visualize(config):
     keypoint_stats = defaultdict(lambda: {'visible': 0, 'occluded': 0})
     areas = []
     
+    # Anomali Tespiti
+    prev_points_dict = None
+    anomalies = [] # (frame_idx, label, distance)
+    JUMP_THRESHOLD = config.get("jump_threshold", 50)
+
+    
     # Video Writer
     first_img = images[0]
     w = int(first_img.attrib['width'])
@@ -255,9 +262,35 @@ def analyze_and_visualize(config):
                     cv2.putText(frame_img, label, (center[0]+10, center[1]-10), 
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.7, config["text_color"], 2)
 
+                # --- ANOMALI KONTROLU (YENI) ---
+                frame_anomalies = []
+                if prev_points_dict is not None:
+                    for label, data in points_dict.items():
+                        if label in prev_points_dict:
+                            x1, y1, _ = data
+                            x2, y2, _ = prev_points_dict[label]
+                            dist = np.sqrt((x1 - x2)**2 + (y1 - y2)**2)
+                            
+                            if dist > JUMP_THRESHOLD:
+                                frame_anomalies.append((label, dist))
+                                anomalies.append([idx, label, f"{dist:.1f}"])
+                
+                if frame_anomalies:
+                    # Ekrana uyari yaz
+                    cv2.putText(frame_img, f"DIKKAT: {len(frame_anomalies)} ADET ZIPLAMA!", (30, 100), 
+                                cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 3)
+                    y_off = 140
+                    for lbl, dist in frame_anomalies[:3]: # Ekrana en fazla 3 tanesini yaz
+                        text = f"{lbl}: {dist:.1f} px"
+                        cv2.putText(frame_img, text, (30, y_off), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 0, 255), 2)
+                        y_off += 30
+
+                prev_points_dict = points_dict
+                
                 cv2.putText(frame_img, f"Frame: {idx} | Pts: {len(points_dict)}/16", (30, 50), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, config["text_color"], 2)
             else:
+                prev_points_dict = None # Etiket yoksa gecmisi sifirla
                 cv2.putText(frame_img, "ETIKETLENMEMIS", (30, 50), 
                             cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
 
@@ -329,6 +362,20 @@ def analyze_and_visualize(config):
             
             pdf.create_centered_table(table_header, table_data)
 
+            # Bölüm 3: Anomali
+            pdf.ln(10)
+            pdf.section_title("3. SUPHELI KARELER (ANOMALI TESPITI)")
+            pdf.section_body(f"Eşik Değeri (Threshold): {JUMP_THRESHOLD} piksel. Bu değerin üzerindeki ani keypoint hareketleri listelenir.")
+            
+            if anomalies:
+                anomaly_header = ['Kare No', 'Uzuv', 'Mesafe (px)']
+                # En yüksek 25 anomaliyi göster
+                sorted_anomalies = sorted(anomalies, key=lambda x: float(x[2]), reverse=True)[:30]
+                pdf.create_centered_table(anomaly_header, sorted_anomalies)
+            else:
+                pdf.section_body("Herhangi bir ziplama (anomali) tespit edilemedi.")
+
+
             pdf.output(pdf_name)
             print(f"\nPDF Raporu Olusturuldu: {pdf_name}")
         except Exception as e:
@@ -353,6 +400,17 @@ def analyze_and_visualize(config):
         print(f"{'ID':<5} | {'Görünür':<10} | {'Görünmez':<10} | {'Oran %':<10}")
         for row in table_data:
              print(f"{row[0]:<5} | {row[1]:<10} | {row[2]:<10} | {row[3]:<10}")
+        print("="*60)
+        
+        print(f"4. ANOMALI OZETI (Threshold: {JUMP_THRESHOLD} px)")
+        if anomalies:
+            print(f"   Toplam Supheli Hareket: {len(anomalies)}")
+            print(f"   En Yuksek 5 Anomali:")
+            sorted_anomalies = sorted(anomalies, key=lambda x: float(x[2]), reverse=True)[:5]
+            for item in sorted_anomalies:
+                print(f"   - Kare: {item[0]} | Uzuv: {item[1]} | Mesafe: {item[2]}")
+        else:
+            print("   Temiz. Ziplama yok.")
         print("="*60)
 
 if __name__ == "__main__":
